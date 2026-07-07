@@ -283,6 +283,8 @@ export const defaultSettings = {
     depthPromptGuidedResponse: 0,
     depthPromptGuidedSwipe: 0,
     depthPromptCustomAuto: 1, // Default depth for Custom Auto Guide
+    profileSwitchTimeout: 500, // Default safety delay after profile switch (ms)
+    presetSwitchTimeout: 200, // Default safety delay after preset switch (ms)
     LastPatchNoteVersion: '1.4.3' // Default extension version for patch notes
 };
 
@@ -473,7 +475,8 @@ async function updateSettingsUI() {
         });
 
         // Populate depth number input fields
-        ['depthPromptClothes', 'depthPromptState', 'depthPromptThinking', 'depthPromptCustomAuto', 'depthPromptSituational', 'depthPromptRules', 'depthPromptCorrections', 'depthPromptGuidedResponse', 'depthPromptGuidedSwipe'].forEach(key => {
+        ['depthPromptClothes', 'depthPromptState', 'depthPromptThinking', 'depthPromptCustomAuto', 'depthPromptSituational', 'depthPromptRules', 'depthPromptCorrections', 'depthPromptGuidedResponse', 'depthPromptGuidedSwipe',
+         'profileSwitchTimeout', 'presetSwitchTimeout'].forEach(key => {
             const input = document.getElementById(`gg_${key}`);
             if (input) {
                 input.value = extension_settings[extensionName][key] ?? defaultSettings[key] ?? 0; // Default to 0 if undefined
