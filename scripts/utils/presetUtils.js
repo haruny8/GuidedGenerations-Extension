@@ -1175,6 +1175,25 @@ export function captureWorldInfoBudget() {
  * Only touches world_info_budget - all other World Info settings (depth, recursion, etc.) are left untouched.
  * @param {number} budgetPercent The percentage (0-100) to apply.
  */
+/**
+ * Syncs ST's own World Info "Context %" slider and its number readout to reflect the current
+ * world_info_budget value. updateWorldInfoSettings() only updates the underlying JS variable and
+ * persists it - it does NOT redraw the slider widget (that only happens at page-load time via ST's
+ * separate setWorldInfoSettings() function). This replicates that same DOM sync manually so the
+ * slider visually confirms the swap in real time.
+ * @param {number} value The percentage value to display.
+ */
+function syncWorldInfoBudgetSliderUI(value) {
+    try {
+        const slider = document.getElementById('world_info_budget');
+        if (slider) slider.value = value;
+        const counter = document.getElementById('world_info_budget_counter');
+        if (counter) counter.value = value;
+    } catch (error) {
+        debugWarn(`[${extensionName}] Error syncing World Info budget slider UI:`, error);
+    }
+}
+
 export function applyImpersonateWorldInfoBudget(budgetPercent) {
     try {
         const value = Number(budgetPercent);
@@ -1184,6 +1203,7 @@ export function applyImpersonateWorldInfoBudget(budgetPercent) {
         }
         debugLog(`[${extensionName}] Applying Impersonate-specific World Info budget: ${value}%`);
         updateWorldInfoSettings({ world_info_budget: value });
+        syncWorldInfoBudgetSliderUI(value);
     } catch (error) {
         debugWarn(`[${extensionName}] Error applying World Info budget override:`, error);
     }
@@ -1200,6 +1220,7 @@ export function restoreWorldInfoBudget(snapshot) {
     try {
         debugLog(`[${extensionName}] Restoring World Info budget to: ${snapshot.world_info_budget}%`);
         updateWorldInfoSettings({ world_info_budget: snapshot.world_info_budget });
+        syncWorldInfoBudgetSliderUI(snapshot.world_info_budget);
     } catch (error) {
         debugWarn(`[${extensionName}] Error restoring World Info budget:`, error);
     }
