@@ -117,6 +117,18 @@
                     </div>
                 </div>
 
+                <!-- Impersonate World Info Budget Override -->
+                <div class="setting_item">
+                    <h4>World Info Budget Override (Impersonate)</h4>
+                    <small class="setting_item_description">
+                        Overrides the global World Info "Context %" budget specifically while an Impersonate call is running, then restores your normal setting afterward. Useful when your Impersonate model has a much smaller context window than your main roleplay model, so constant lorebook entries don't eat the entire budget. Set to "Off" (0) to leave your global World Info Context % setting untouched during Impersonate calls.
+                    </small>
+                    <div style="display: flex; align-items: center; gap: 12px; margin-top: 10px;">
+                        <input type="range" id="gg_impersonateWorldInfoBudget" name="impersonateWorldInfoBudget" class="gg-setting-input" min="0" max="100" step="1" value="0" style="flex: 1;">
+                        <span id="gg_impersonateWorldInfoBudget_display" style="min-width: 40px; text-align: right; font-weight: bold;">Off</span>
+                    </div>
+                </div>
+
                 <!-- Profile/Preset fields for Impersonate 1st/2nd/3rd -->
                 <div class="setting_item">
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">

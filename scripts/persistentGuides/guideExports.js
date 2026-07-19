@@ -70,7 +70,7 @@ const defaultSettings = {
 };
 
 // Utility functions
-import { handleSwitching, getProfileApiType, getPresetsForApiType, getCurrentProfile, getProfileList, switchToProfile, switchToPreset, withProfile, getConnectApiMap, initializeEventListeners, extractApiIdFromApiType } from '../utils/presetUtils.js';
+import { handleSwitching, getProfileApiType, getPresetsForApiType, getCurrentProfile, getProfileList, switchToProfile, switchToPreset, withProfile, getConnectApiMap, initializeEventListeners, extractApiIdFromApiType, captureWorldInfoBudget, applyImpersonateWorldInfoBudget, restoreWorldInfoBudget } from '../utils/presetUtils.js';
 
 // Main script functions
 import { guidedSwipe, generateNewSwipe } from '../guidedSwipe.js';
@@ -111,6 +111,9 @@ export {
     getConnectApiMap,
     initializeEventListeners,
     extractApiIdFromApiType,
+    captureWorldInfoBudget,
+    applyImpersonateWorldInfoBudget,
+    restoreWorldInfoBudget,
 
     // Main script functions
     guidedSwipe,

@@ -1,5 +1,5 @@
 // scripts/guidedImpersonate2nd.js
-import { getContext, extension_settings, extensionName, debugLog, handleSwitching, getPreviousImpersonateInput, setPreviousImpersonateInput, getLastImpersonateResult, setLastImpersonateResult } from './persistentGuides/guideExports.js'; // Import from central hub
+import { getContext, extension_settings, extensionName, debugLog, handleSwitching, getPreviousImpersonateInput, setPreviousImpersonateInput, getLastImpersonateResult, setLastImpersonateResult, captureWorldInfoBudget, applyImpersonateWorldInfoBudget, restoreWorldInfoBudget } from './persistentGuides/guideExports.js'; // Import from central hub
 
 const guidedImpersonate2nd = async () => {
     const textarea = document.getElementById('send_textarea');
@@ -59,6 +59,10 @@ const guidedImpersonate2nd = async () => {
     const stscriptCommand = `/impersonate await=true ${filledPrompt} |`;
     const fullScript = `// Impersonate guide|\n${stscriptCommand}`;
 
+    // Capture World Info budget so it can be temporarily overridden for this Impersonate call
+    let wiBudgetSnapshot = null;
+    const impersonateWiBudget = extension_settings[extensionName]?.impersonateWorldInfoBudget ?? 0;
+
     try {
         const context = getContext();
         if (typeof context.executeSlashCommandsWithOptions === 'function') {
@@ -66,6 +70,12 @@ const guidedImpersonate2nd = async () => {
             
             // Switch profile and preset before executing
             await switchProfileAndPreset();
+
+            // Apply Impersonate-specific World Info budget override, if configured
+            if (impersonateWiBudget > 0) {
+                wiBudgetSnapshot = captureWorldInfoBudget();
+                applyImpersonateWorldInfoBudget(impersonateWiBudget);
+            }
             
             debugLog('[Impersonate-2nd] Profile and preset switch complete, about to execute STScript...');
             
@@ -78,6 +88,11 @@ const guidedImpersonate2nd = async () => {
             setLastImpersonateResult(textarea.value);
             debugLog('[Impersonate-2nd] STScript executed, new input stored in shared state.');
 
+            // Restore World Info budget before restoring profile/preset
+            if (wiBudgetSnapshot) {
+                restoreWorldInfoBudget(wiBudgetSnapshot);
+            }
+
             // After completion, restore original profile and preset using utility restore function
             await restore();
             
@@ -87,11 +102,16 @@ const guidedImpersonate2nd = async () => {
             console.error('[GuidedGenerations] context.executeSlashCommandsWithOptions not found!');
         }
     } catch (error) {
-        console.error(`[GuidedGenerations] Error executing Guided Impersonate (2nd) stscript: ${error}`);
+        console.error(`[GuidedGenerations] Error executing Guided Impersonate (1st) stscript: ${error}`);
         setLastImpersonateResult(''); // Use setter to clear shared state on error
         
         debugLog('[Impersonate-2nd] Error occurred, about to restore profile...');
         
+        // Restore World Info budget on error too
+        if (wiBudgetSnapshot) {
+            restoreWorldInfoBudget(wiBudgetSnapshot);
+        }
+
         // Restore original profile and preset on error
         await restore();
         
