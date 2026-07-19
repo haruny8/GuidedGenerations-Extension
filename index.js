@@ -2,18 +2,12 @@ import { eventSource, saveSettingsDebounced } from '../../../../script.js'; // F
 // Removed the incorrect SillyTavern import
 
 // Import button logic from separate modules
-import { simpleSend } from './scripts/simpleSend.js';
-import { recoverInput } from './scripts/inputRecovery.js';
 import { guidedResponse } from './scripts/guidedResponse.js';
 import { guidedSwipe } from './scripts/guidedSwipe.js';
 import { guidedContinue, undoLastGuidedAddition, revertToOriginalGuidedContinue, initGuidedContinueListeners } from './scripts/guidedContinue.js'; // Added initGuidedContinueListeners, undoLastGuidedAddition, revertToOriginalGuidedContinue
 import { guidedImpersonate } from './scripts/guidedImpersonate.js';
 import { guidedImpersonate2nd } from './scripts/guidedImpersonate2nd.js'; // Import 2nd
 import { guidedImpersonate3rd } from './scripts/guidedImpersonate3rd.js'; // Import 3rd
-// Import the new Update Character function
-import { updateCharacter } from './scripts/persistentGuides/updateCharacter.js';
-// Import the new Custom Auto Guide
-import customAutoGuide from './scripts/persistentGuides/customAutoGuide.js';
 // Import necessary functions/objects from SillyTavern
 import { getContext, loadExtensionSettings, extension_settings, renderExtensionTemplateAsync } from '../../../extensions.js'; 
 // Import Preset Manager
@@ -22,11 +16,6 @@ import { loadSettingsPanel } from './scripts/settingsPanel.js';
 import { showVersionNotification } from './scripts/ui/versionNotificationPopup.js';
 import { getProfileList } from './scripts/persistentGuides/guideExports.js';
 
-// Import auto-triggerable guides
-import thinkingGuide from './scripts/persistentGuides/thinkingGuide.js';
-import stateGuide from './scripts/persistentGuides/stateGuide.js';
-import clothesGuide from './scripts/persistentGuides/clothesGuide.js';
-import { checkAndExecuteTracker } from './scripts/persistentGuides/trackerLogic.js';
 
 // --- Shared State for Impersonation Input Recovery ---
 let previousImpersonateInput = ''; // Input before the last impersonation
@@ -176,56 +165,16 @@ export function getDebugMessagesAsText() {
 // Removed storedInput as recovery now uses stscript global vars
 
 export const defaultSettings = {
-    autoTriggerClothes: false, // Default off
-    autoTriggerState: false,   // Default off
-    autoTriggerThinking: false, // Default off
-    enableAutoCustomAutoGuide: false, // Default off for auto-triggering the new guide
     showImpersonate1stPerson: true, // Default on
     showImpersonate2ndPerson: false, // Default off
     showImpersonate3rdPerson: false, // Default off
     showGuidedContinue: false, // Default off for Guided Continue
     showGuidedResponse: true, // Default on for Guided Response
     showGuidedSwipe: true, // Default on for Guided Swipe
-    showSimpleSendButton: false, // Individual tool button toggles
-    showRecoverInputButton: false,
-    showEditIntrosButton: false,
-    showCorrectionsButton: false,
-    showSpellcheckerButton: false,
-    showClearInputButton: false,
-    showUndoButton: false, // Default off for Undo Last Addition button
-    showRevertButton: false, // Default off for Revert to Original button
     integrateQrBar: true, // Default on: Toggle for QR bar integration
     debugMode: false, // Default off: Toggle for debug logging
-    persistentGuidesInChatlog: true, // Default on: Show persistent guides in chatlog
     injectionEndRole: 'system', // NEW SETTING: Default role for non-chat injections
     // Profile and Preset settings for each guide
-    profileClothes: '', // Profile for Clothes Guide
-    presetClothes: '',
-    profileClothesApiType: '', // API type for Clothes Guide profile
-    profileState: '', // Profile for State Guide
-    presetState: '',
-    profileStateApiType: '', // API type for State Guide profile
-    profileThinking: '', // Profile for Thinking Guide
-    presetThinking: '',
-    profileThinkingApiType: '', // API type for Thinking Guide profile
-    profileSituational: '', // Profile for Situational Guide
-    presetSituational: '',
-    profileSituationalApiType: '', // API type for Situational Guide profile
-    profileRules: '', // Profile for Rules Guide
-    presetRules: '',
-    profileRulesApiType: '', // API type for Rules Guide profile
-    profileCustom: '', // Profile for Custom Guide
-    presetCustom: '',
-    profileCustomApiType: '', // API type for Custom Guide profile
-    profileCorrections: '', // Profile for Corrections
-    presetCorrections: '',
-    profileCorrectionsApiType: '', // API type for Corrections profile
-    profileSpellchecker: '', // Profile for Spellchecker
-    presetSpellchecker: '',
-    profileSpellcheckerApiType: '', // API type for Spellchecker profile
-    profileEditIntros: '', // Profile for Edit Intros
-    presetEditIntros: '',
-    profileEditIntrosApiType: '', // API type for Edit Intros profile
     profileImpersonate1st: '', // Profile for Impersonate 1st Person
     presetImpersonate1st: '',
     profileImpersonate1stApiType: '', // API type for Impersonate 1st Person profile
@@ -235,54 +184,16 @@ export const defaultSettings = {
     profileImpersonate3rd: '', // Profile for Impersonate 3rd Person
     presetImpersonate3rd: '',
     profileImpersonate3rdApiType: '', // API type for Impersonate 3rd Person profile
-    profileCustomAuto: '', // Profile for Custom Auto Guide
-    presetCustomAuto: '', // Default preset for Custom Auto Guide
-    profileCustomAutoApiType: '', // API type for Custom Auto Guide profile
-    usePresetCustomAuto: false, // Default use preset toggle for Custom Auto Guide
-    profileFun: '', // Profile for Fun Prompts
-    presetFun: '', // Default preset for Fun Prompts
-    profileFunApiType: '', // API type for Fun Prompts profile
-    // Separate tracker settings for the two calls
-    profileTrackerDetermine: '', // Profile for Tracker: Determine Changes
-    presetTrackerDetermine: '', // Preset for Tracker: Determine Changes
-    profileTrackerDetermineApiType: '', // API type for Tracker: Determine Changes
-    profileTrackerUpdate: '', // Profile for Tracker: Update with Changes
-    presetTrackerUpdate: '', // Preset for Tracker: Update with Changes
-    profileTrackerUpdateApiType: '', // API type for Tracker: Update with Changes
     // Guide prompt overrides
-    promptClothes: '[OOC: Answer me out of Character! Don\'t continue the RP.  Considering where we are currently in the story, write me a list entailing the clothes and look, what they are currently wearing of all participating characters, including {{user}}, that are present in the current scene. Don\'t mention people or clothing pieces no longer relevant to the ongoing scene.] ',
-    promptState: '[OOC: Answer me out of Character! Don\'t continue the RP.  Considering the last response, write me a list entailing what state and position of all participating characters, including {{user}}, that are present in the current scene. Don\'t describe their clothes or how they are dressed. Don\'t mention people no longer relevant to the ongoing scene.] ',
-    promptThinking: '[OOC: Answer me out of Character! Don\'t continue the RP.  Write what each characters in the current scene are currently thinking, pure thought only. Do NOT continue the story or include narration or dialogue. Do not include the{{user}}\'s thoughts.] ',
-    promptSituational: '[OOC: Answer me out of Character! Don\'t continue the RP.  Analyze the chat history and provide a concise summary of: 1. Current location and setting (indoors/outdoors, time of day, weather if relevant) 2. Present characters and their current activities 3. Relevant objects, items, or environmental details that could influence interactions 4. Recent events or topics of conversation (last 10-20 messages) Keep the overview factual and neutral without speculation. Format in clear paragraphs.] ',
-    promptRules: '[OOC: Answer me out of Character! Don\'t continue the RP.  Create a list of explicit rules that {{char}} has learned and follows from the story and their character description. Only include rules explicitly established in chat history or character info. Format as a numbered list.] ',
-    promptCorrections: '[OOC: Answer me out of Character! Don\'t continue the RP.  Do not continue the story do not wrote in character, instead write {{char}}\'s last response (msgtorework) again but change it to reflect the following: {{input}}. Don\'t make any other changes besides this.]',
-            promptSpellchecker: 'Without any intro or outro correct the grammar, punctuation and improve the paragraph\'s flow without adding anything else of: {{input}}',
     promptImpersonate1st: 'Write in first Person perspective from {{user}}. {{input}}',
     promptImpersonate2nd: 'Write in second Person perspective from {{user}}, using you/yours for {{user}}. {{input}}',
     promptImpersonate3rd: 'Write in third Person perspective from {{user}} using third-person pronouns for {{user}}. {{input}}',
     promptGuidedResponse: '[Take the following into special consideration for your next message: {{input}}]',
     promptGuidedSwipe: '[Take the following into special consideration for your next message: {{input}}]',
     promptGuidedContinue: '[Continue the story based on the following input: {{input}}]', // Default prompt override for Guided Continue
-    customAutoGuidePrompt: '', // Default empty prompt for Custom Auto Guide
-    // Raw flags for prompt overrides
-    rawPromptClothes: false,
-    rawPromptState: false,
-    rawPromptThinking: false,
-    rawPromptSituational: false,
-    rawPromptRules: false,
-    rawPromptCorrections: false,
-    rawPromptSpellchecker: false,
-    rawPromptCustomAuto: false, // Default raw prompt setting for Custom Auto Guide
     // Depth settings for prompt overrides
-    depthPromptClothes: 1,
-    depthPromptState: 1,
-    depthPromptThinking: 0,
-    depthPromptSituational: 1,
-    depthPromptRules: 0,
-    depthPromptCorrections: 0,
     depthPromptGuidedResponse: 0,
     depthPromptGuidedSwipe: 0,
-    depthPromptCustomAuto: 1, // Default depth for Custom Auto Guide
     profileSwitchTimeout: 500, // Default safety delay after profile switch (ms)
     presetSwitchTimeout: 200, // Default safety delay after preset switch (ms)
     LastPatchNoteVersion: '1.4.3' // Default extension version for patch notes
@@ -403,11 +314,7 @@ async function updateSettingsUI() {
             const profileList = await getProfileList();
             debugLog(`[${extensionName}] Profile list received:`, profileList);
             
-            const profileKeys = ['profileClothes','profileState','profileThinking','profileSituational','profileRules',
-             'profileCustom','profileCorrections','profileSpellchecker','profileEditIntros',
-             'profileImpersonate1st','profileImpersonate2nd','profileImpersonate3rd',
-             'profileCustomAuto','profileFun','profileTrackerDetermine','profileTrackerUpdate'
-            ];
+            const profileKeys = ['profileImpersonate1st','profileImpersonate2nd','profileImpersonate3rd'];
             
             profileKeys.forEach(key => {
                 const select = document.getElementById(key);
@@ -439,35 +346,19 @@ async function updateSettingsUI() {
         }
 
         // Populate preset dropdowns with correct presets for selected profiles
-        ['presetClothes','presetState','presetThinking','presetSituational','presetRules',
-         'presetCustom','presetCorrections','presetSpellchecker','presetEditIntros',
-         'presetImpersonate1st','presetImpersonate2nd','presetImpersonate3rd',
-         'presetCustomAuto','presetFun','presetTrackerDetermine','presetTrackerUpdate'
-        ].forEach(async (key) => {
+        ['presetImpersonate1st','presetImpersonate2nd','presetImpersonate3rd'].forEach(async (key) => {
             const select = document.getElementById(key);
             if (select) {
-                // Debug logging for presetFun specifically
-                if (key === 'presetFun') {
-                    debugLog(`Found presetFun element:`, select);
-                    debugLog(`presetFun current value:`, select.value);
-                    debugLog(`presetFun setting value:`, extension_settings[extensionName][key]);
-                }
-                
                 // Use the improved populatePresetDropdown function that checks for selected profiles
                 await populatePresetDropdown(select);
                 
                 // Set current value after populating
                 select.value = extension_settings[extensionName][key] ?? defaultSettings[key] ?? '';
-            } else {
-                // Debug logging for missing presetFun element
-                if (key === 'presetFun') {
-                    console.error(`${extensionName}: presetFun element NOT found in DOM`);
-                }
             }
         });
 
         // Populate guide prompt override textareas
-        ['promptClothes','promptState','promptThinking','promptSituational','promptRules','promptCorrections','promptSpellchecker','promptImpersonate1st','promptImpersonate2nd','promptImpersonate3rd','promptGuidedResponse','promptGuidedSwipe','promptGuidedContinue','customAutoGuidePrompt'].forEach(key => {
+        ['promptImpersonate1st','promptImpersonate2nd','promptImpersonate3rd','promptGuidedResponse','promptGuidedSwipe','promptGuidedContinue'].forEach(key => {
             const textarea = document.getElementById(`gg_${key}`);
             if (textarea) {
                 textarea.value = extension_settings[extensionName][key] ?? defaultSettings[key] ?? '';
@@ -475,7 +366,7 @@ async function updateSettingsUI() {
         });
 
         // Populate depth number input fields
-        ['depthPromptClothes', 'depthPromptState', 'depthPromptThinking', 'depthPromptCustomAuto', 'depthPromptSituational', 'depthPromptRules', 'depthPromptCorrections', 'depthPromptGuidedResponse', 'depthPromptGuidedSwipe',
+        ['depthPromptGuidedResponse', 'depthPromptGuidedSwipe',
          'profileSwitchTimeout', 'presetSwitchTimeout'].forEach(key => {
             const input = document.getElementById(`gg_${key}`);
             if (input) {
@@ -522,10 +413,6 @@ const handleSettingsChangeDelegated = async (event) => {
         // Special handling for button visibility settings after change
         if (event.target.name === 'showImpersonateButton') {
             updateImpersonateButtonVisibility();
-        }
-        if (event.target.name === 'showPersistentGuidesMenu') {
-            const menu = document.getElementById('persistent_guides_menu');
-            if (menu) menu.style.display = event.target.checked ? '' : 'none';
         }
         if (event.target.name === 'showSwipeButton') {
             const button = document.getElementById('guided_swipe_button');
@@ -578,8 +465,8 @@ function handleSettingChange(event) {
         settingValue = target.value;
         
         // Handle preset and profile dropdowns - no validation needed as values are preset IDs or profile names
-        const presetFields = ['presetClothes', 'presetState', 'presetThinking', 'presetSituational', 'presetRules', 'presetCustom', 'presetCorrections', 'presetSpellchecker', 'presetEditIntros', 'presetImpersonate1st', 'presetImpersonate2nd', 'presetImpersonate3rd', 'presetCustomAuto'];
-        const profileFields = ['profileClothes', 'profileState', 'profileThinking', 'profileSituational', 'profileRules', 'profileCustom', 'profileCorrections', 'profileSpellchecker', 'profileEditIntros', 'profileImpersonate1st', 'profileImpersonate2nd', 'profileImpersonate3rd', 'profileCustomAuto', 'profileFun', 'profileTracker'];
+        const presetFields = ['presetImpersonate1st', 'presetImpersonate2nd', 'presetImpersonate3rd'];
+        const profileFields = ['profileImpersonate1st', 'profileImpersonate2nd', 'profileImpersonate3rd'];
         if (presetFields.includes(settingName) || profileFields.includes(settingName)) {
             // Values are preset IDs (numbers) or profile names, no pipe validation needed
             settingValue = settingValue.trim();
@@ -590,7 +477,7 @@ function handleSettingChange(event) {
             settingValue = settingValue.trim().replace(/\r?\n/g, '\n');
             
             // Validate preset fields to prevent pipe characters
-            const presetFields = ['presetClothes', 'presetState', 'presetThinking', 'presetSituational', 'presetRules', 'presetCustom', 'presetCorrections', 'presetSpellchecker', 'presetEditIntros', 'presetImpersonate1st', 'presetImpersonate2nd', 'presetImpersonate3rd', 'presetCustomAuto'];
+            const presetFields = ['presetImpersonate1st', 'presetImpersonate2nd', 'presetImpersonate3rd'];
             if (presetFields.includes(settingName) && settingValue.includes('|')) {
                 console.warn(`${extensionName}: Preset value cannot contain pipe character (|)`);
                 // Remove pipe characters and update the input field
@@ -604,7 +491,7 @@ function handleSettingChange(event) {
             settingValue = settingValue.trim().replace(/\r?\n/g, '\n');
             
             // Validate preset fields to prevent pipe characters
-            const presetFields = ['presetClothes', 'presetState', 'presetThinking', 'presetSituational', 'presetRules', 'presetCustom', 'presetCorrections', 'presetSpellchecker', 'presetEditIntros', 'presetImpersonate1st', 'presetImpersonate2nd', 'presetImpersonate3rd', 'presetCustomAuto'];
+            const presetFields = ['presetImpersonate1st', 'presetImpersonate2nd', 'presetImpersonate3rd'];
             if (presetFields.includes(settingName) && settingValue.includes('|')) {
                 console.warn(`${extensionName}: Preset value cannot contain pipe character (|)`);
                 // Remove pipe characters and update the input field
@@ -805,112 +692,6 @@ function updateExtensionButtons() {
         ggToolsMenu.id = 'gg_tools_menu';
         ggToolsMenu.className = 'gg-tools-menu'; // Dropdown menu styling
 
-        // Add menu items (Simple Send, Recover Input)
-        const simpleSendMenuItem = document.createElement('a');
-        simpleSendMenuItem.href = '#';
-        simpleSendMenuItem.className = 'interactable'; // Use interactable class
-        simpleSendMenuItem.innerHTML = '<i class="fa-solid fa-paper-plane fa-fw"></i><span data-i18n="Simple Send">Simple Send</span>'; // Add icon + span
-        simpleSendMenuItem.title = "Sends the current input directly to the Chat without triggering a response from the Chatbot.";
-        simpleSendMenuItem.addEventListener('click', (event) => {
-            simpleSend();
-            ggToolsMenu.classList.remove('shown');
-            event.stopPropagation();
-        });
-
-        const recoverInputMenuItem = document.createElement('a');
-        recoverInputMenuItem.href = '#';
-        recoverInputMenuItem.className = 'interactable'; // Use interactable class
-        recoverInputMenuItem.innerHTML = '<i class="fa-solid fa-arrow-rotate-left fa-fw"></i><span data-i18n="Recover Input">Recover Input</span>'; // Add icon + span
-        recoverInputMenuItem.title = "Restores your previously typed input if it was accidentally cleared or overwritten.";
-        recoverInputMenuItem.addEventListener('click', (event) => {
-            recoverInput();
-            ggToolsMenu.classList.remove('shown');
-            event.stopPropagation();
-        });
-
-        // Add new menu items from the JSON file
-        // 1. Edit Intros
-        const editIntrosMenuItem = document.createElement('a');
-        editIntrosMenuItem.href = '#';
-        editIntrosMenuItem.className = 'interactable';
-        editIntrosMenuItem.innerHTML = '<i class="fa-solid fa-user-edit fa-fw"></i><span data-i18n="Edit Intros">Edit Intros</span>';
-        editIntrosMenuItem.title = "Opens a popup to edit or regenerate character introductions based on various criteria.";
-        editIntrosMenuItem.addEventListener('click', async (event) => {
-            const editIntros = await import('./scripts/tools/editIntros.js');
-            await editIntros.default();
-            ggToolsMenu.classList.remove('shown');
-            event.stopPropagation();
-        });
-
-        // 2. Corrections
-        const correctionsMenuItem = document.createElement('a');
-        correctionsMenuItem.href = '#';
-        correctionsMenuItem.className = 'interactable';
-        correctionsMenuItem.innerHTML = '<i class="fa-solid fa-file-alt fa-fw"></i><span data-i18n="Corrections">Corrections</span>';
-        correctionsMenuItem.title = "Instructs the AI to rewrite its last message, incorporating the corrections or changes you provide in the input field.";
-        correctionsMenuItem.addEventListener('click', async (event) => {
-            console.log('[GuidedGenerations] Corrections menu item clicked, starting import...');
-            console.log('[GuidedGenerations] Current location:', window.location.href);
-            console.log('[GuidedGenerations] Current script src:', document.currentScript?.src || 'unknown');
-            console.log('[GuidedGenerations] Import path:', './scripts/persistentGuides/guideExports.js');
-            try {
-                console.log('[GuidedGenerations] About to import from central hub:', './scripts/persistentGuides/guideExports.js');
-                const { corrections } = await import('./scripts/persistentGuides/guideExports.js');
-                console.log('[GuidedGenerations] Successfully imported corrections function:', corrections);
-                await corrections();
-                console.log('[GuidedGenerations] Corrections function executed successfully');
-                ggToolsMenu.classList.remove('shown');
-                event.stopPropagation();
-            } catch (error) {
-                console.error('[GuidedGenerations] Failed to import or execute corrections:', error);
-                console.error('[GuidedGenerations] Error details:', {
-                    message: error.message,
-                    stack: error.stack,
-                    name: error.name,
-                    cause: error.cause
-                });
-            }
-        });
-
-        // 3. Spellchecker
-        const spellcheckerMenuItem = document.createElement('a');
-        spellcheckerMenuItem.href = '#';
-        spellcheckerMenuItem.className = 'interactable';
-        spellcheckerMenuItem.innerHTML = '<i class="fa-solid fa-spell-check fa-fw"></i><span data-i18n="Spellchecker">Spellchecker</span>';
-        spellcheckerMenuItem.title = "Checks and corrects the grammar, punctuation, and flow of the text currently in your input field.";
-        spellcheckerMenuItem.addEventListener('click', async (event) => {
-            console.log('[GuidedGenerations] Spellchecker menu item clicked, starting import...');
-            try {
-                console.log('[GuidedGenerations] About to import from central hub:', './scripts/persistentGuides/guideExports.js');
-                const { spellchecker } = await import('./scripts/persistentGuides/guideExports.js');
-                console.log('[GuidedGenerations] Successfully imported spellchecker function:', spellchecker);
-                await spellchecker();
-                console.log('[GuidedGenerations] Spellchecker function executed successfully');
-                ggToolsMenu.classList.remove('shown');
-                event.stopPropagation();
-            } catch (error) {
-                console.error('[GuidedGenerations] Failed to import or execute spellchecker:', error);
-                console.error('[GuidedGenerations] Error details:', {
-                    message: error.message,
-                    stack: error.stack,
-                    name: error.name,
-                    cause: error.cause
-                });
-            }
-        });
-
-        // 4. Clear Input
-        const clearInputMenuItem = document.createElement('a');
-        clearInputMenuItem.href = '#';
-        clearInputMenuItem.className = 'interactable';
-        clearInputMenuItem.innerHTML = '<i class="fa-solid fa-trash fa-fw"></i><span data-i18n="Clear Input">Clear Input</span>';
-        clearInputMenuItem.addEventListener('click', async (event) => {
-            const clearInput = await import('./scripts/tools/clearInput.js');
-            await clearInput.default();
-            ggToolsMenu.classList.remove('shown');
-            event.stopPropagation();
-        });
-
         // Add Undo Last Addition menu item
         const undoMenuItem = document.createElement('a');
         undoMenuItem.href = '#';
@@ -939,15 +720,7 @@ function updateExtensionButtons() {
             event.stopPropagation();
         });
 
-        // Add original items first
-        ggToolsMenu.appendChild(simpleSendMenuItem);
-        ggToolsMenu.appendChild(recoverInputMenuItem);
-        
-        // Add a separator
-        const separator = document.createElement('hr');
-        separator.className = 'pg-separator';
-        ggToolsMenu.appendChild(separator);
-
+        // Add items to the menu
         ggToolsMenu.appendChild(undoMenuItem);
         ggToolsMenu.appendChild(revertMenuItem);
         // Add a separator
@@ -969,24 +742,7 @@ function updateExtensionButtons() {
             event.stopPropagation();
         });
 
-        // Add new items after the separator
-        ggToolsMenu.appendChild(editIntrosMenuItem);
-        ggToolsMenu.appendChild(correctionsMenuItem);
-        ggToolsMenu.appendChild(spellcheckerMenuItem);
-        ggToolsMenu.appendChild(clearInputMenuItem);
         ggToolsMenu.appendChild(helpMenuItem);
-
-        // Add Update Character item
-        /*const updateCharacterMenuItem = document.createElement('a');
-        updateCharacterMenuItem.href = '#';
-        updateCharacterMenuItem.className = 'interactable';
-        updateCharacterMenuItem.innerHTML = '<i class="fa-solid fa-user-pen fa-fw"></i><span data-i18n="Update Character">Update Character</span>';
-        updateCharacterMenuItem.addEventListener('click', (event) => {
-            updateCharacter();
-            ggToolsMenu.classList.remove('shown');
-            event.stopPropagation();
-        });
-        ggToolsMenu.appendChild(updateCharacterMenuItem);*/
 
         // Append the menu itself to the body, not the button
         document.body.appendChild(ggToolsMenu);
@@ -1029,121 +785,6 @@ function updateExtensionButtons() {
     // Add menu button to the menu buttons container
     menuButtonsContainer.appendChild(ggMenuButton);
 
-    // --- Create Persistent Guides Menu Button --- 
-    let pgMenuButton = document.getElementById('pg_menu_button');
-    if (!pgMenuButton) {
-        // Create it for the first time
-        pgMenuButton = document.createElement('div');
-        pgMenuButton.id = 'pg_menu_button';
-        pgMenuButton.className = 'gg-menu-button fa-solid fa-book-open-reader'; // Thinking icon
-        pgMenuButton.classList.add('interactable'); // Make sure it has interactable styles
-        pgMenuButton.title = 'Persistent Guides';
-
-        const pgToolsMenu = document.createElement('div');
-        pgToolsMenu.id = 'pg_tools_menu';
-        pgToolsMenu.className = 'gg-tools-menu'; // Use same dropdown menu styling
-
-        // Add menu items for each persistent guide
-        const createGuideItem = (name, icon, action, description) => { 
-            const item = document.createElement('a');
-            item.href = '#';
-            item.className = 'interactable'; // Use interactable class
-            item.innerHTML = `<i class="fa-solid ${icon} fa-fw"></i><span data-i18n="${name}">${name}</span>`; // Add icon + span
-            item.title = description; 
-            item.addEventListener('click', (event) => {
-                action();
-                pgToolsMenu.classList.remove('shown');
-                event.stopPropagation();
-            });
-            return item;
-        };
-
-        // Define the order and details for content guides
-        const contentGuides = [
-            { name: 'Situational', icon: 'fa-location-dot', path: './scripts/persistentGuides/situationalGuide.js', description: "Provides a summary of the current location, present characters, relevant objects, and recent events." },
-            { name: 'Thinking', icon: 'fa-brain', path: './scripts/persistentGuides/thinkingGuide.js', description: "Reveals the inner thoughts and motivations of characters in the current scene." },
-            { name: 'Clothes', icon: 'fa-shirt', path: './scripts/persistentGuides/clothesGuide.js', description: "Generates a description of what each character in the current scene is wearing." },
-            { name: 'State', icon: 'fa-face-smile', path: './scripts/persistentGuides/stateGuide.js', description: "Describes the current physical state, position, and actions of characters in the scene." },
-            { name: 'Rules', icon: 'fa-list-ol', path: './scripts/persistentGuides/rulesGuide.js', description: "Lists explicit rules or established facts that characters have learned or follow in the story." },
-            { name: 'Custom', icon: 'fa-pen-to-square', path: './scripts/persistentGuides/customGuide.js', description: "Runs a specific, user-defined custom guide script." },
-            { name: 'Custom Auto', icon: 'fa-robot', path: './scripts/persistentGuides/customAutoGuide.js', description: "Runs a user-defined custom guide automatically based on triggers or conditions." },
-            { name: 'Fun', icon: 'fa-gamepad', path: './scripts/persistentGuides/funGuide.js', description: "Opens a popup with various fun prompts and interactions." }
-        ];
-
-        // Define the order and details for tool guides
-        const toolGuides = [
-            { name: 'Show Guides', icon: 'fa-eye', path: './scripts/persistentGuides/showGuides.js', description: "Displays the content of currently active persistent guides." },
-            { name: 'Edit Guides', icon: 'fa-edit', path: './scripts/persistentGuides/editGuides.js', description: "Opens a popup to create, edit, or delete custom persistent guides and their prompts." },
-            { name: 'Flush Guides', icon: 'fa-trash', path: './scripts/persistentGuides/flushGuides.js', description: "Clears all injected content from persistent guides in the current chat." },
-            { name: 'Stat Tracker', icon: 'fa-chart-line', path: './scripts/persistentGuides/trackerGuide.js', description: "Create and configure stat trackers to monitor specific aspects of your story or characters." }
-        ];
-
-        // Load the content guides in sequence
-        Promise.all(contentGuides.map(guide => {
-            return import(guide.path)
-                .then(module => {
-                    const guideItem = createGuideItem(guide.name, guide.icon, module.default, guide.description);
-                    pgToolsMenu.appendChild(guideItem);
-                })
-                .catch(error => console.error(`${extensionName}: Error importing ${guide.name} guide:`, error));
-        }))
-        .then(() => {
-            // After all content guides, add the separator
-            const separator = document.createElement('hr');
-            separator.className = 'pg-separator';
-            pgToolsMenu.appendChild(separator);
-
-            // Then load the tool guides
-            return Promise.all(toolGuides.map(guide => {
-                return import(guide.path)
-                    .then(module => {
-                        const guideItem = createGuideItem(guide.name, guide.icon, module.default, guide.description);
-                        pgToolsMenu.appendChild(guideItem);
-                    })
-                    .catch(error => console.error(`${extensionName}: Error importing ${guide.name} tool:`, error));
-            }));
-        })
-        .catch(error => console.error(`${extensionName}: Error setting up persistent guides menu:`, error));
-
-        // Append the menu itself to the body
-        document.body.appendChild(pgToolsMenu);
-
-        // Event Handlers for Menu Toggle and Close
-        pgMenuButton.addEventListener('click', (event) => {
-
-            // Temporarily show the menu off-screen to measure its height
-            pgToolsMenu.style.visibility = 'hidden'; 
-            pgToolsMenu.style.display = 'block';
-            const menuHeight = pgToolsMenu.offsetHeight; 
-            pgToolsMenu.style.display = ''; 
-            pgToolsMenu.style.visibility = ''; 
-
-            // Calculate position before showing
-            const buttonRect = pgMenuButton.getBoundingClientRect();
-            const gap = 5; // Add a 5px gap above the button
-
-            // Calculate Y so the *bottom* of the menu is 'gap' pixels above the button's top
-            const targetMenuBottomY = buttonRect.top - gap + window.scrollY;
-            const targetMenuTopY = targetMenuBottomY - menuHeight; // This is the final top coordinate
-            const targetMenuLeftX = buttonRect.left + window.scrollX;
-
-            // Apply top/left instead of transform
-            pgToolsMenu.style.top = `${targetMenuTopY}px`;
-            pgToolsMenu.style.left = `${targetMenuLeftX}px`;
-
-            pgToolsMenu.classList.toggle('shown');
-            event.stopPropagation();
-        });
-
-        document.addEventListener('click', (event) => {
-            if (pgToolsMenu.classList.contains('shown') && !pgMenuButton.contains(event.target)) {
-                pgToolsMenu.classList.remove('shown');
-            }
-        });
-    } 
-    // Add Persistent Guides menu button to the menu buttons container
-    menuButtonsContainer.appendChild(pgMenuButton);
-
     // --- Create Action Buttons --- 
     // Helper function to create buttons
     const createActionButton = (id, title, iconClass, actionFunc) => {
@@ -1172,86 +813,6 @@ function updateExtensionButtons() {
     // Create an array to store all buttons that will go in the regular buttons container
     // We'll add the buttons in the desired order and then add them to the container
     const regularButtons = [];
-    
-    // Add individual tool buttons first (left side)
-    
-    // Simple Send button
-    if (settings.showSimpleSendButton) {
-        const simpleSendButton = createActionButton('gg_simple_send_button', 'Simple Send', 'fa-solid fa-paper-plane', simpleSend);
-        regularButtons.push(simpleSendButton);
-    }
-    
-    // Recover Input button
-    if (settings.showRecoverInputButton) {
-        const recoverInputButton = createActionButton('gg_recover_input_button', 'Recover Input', 'fa-solid fa-arrow-rotate-left', recoverInput);
-        regularButtons.push(recoverInputButton);
-    }
-    
-    // Edit Intros button
-    if (settings.showEditIntrosButton) {
-        const editIntrosButton = createActionButton('gg_edit_intros_button', 'Edit Intros', 'fa-solid fa-user-edit', async () => {
-            const editIntros = await import('./scripts/tools/editIntros.js');
-            await editIntros.default();
-        });
-        regularButtons.push(editIntrosButton);
-    }
-    
-    // Corrections button
-    if (settings.showCorrectionsButton) {
-        const correctionsButton = createActionButton('gg_corrections_button', 'Corrections', 'fa-solid fa-file-alt', async () => {
-            console.log('[GuidedGenerations] Corrections action button clicked, starting import...');
-            try {
-                console.log('[GuidedGenerations] Action button: About to import from central hub:', './scripts/persistentGuides/guideExports.js');
-                const { corrections } = await import('./scripts/persistentGuides/guideExports.js');
-                console.log('[GuidedGenerations] Action button: Successfully imported corrections function:', corrections);
-                await corrections();
-                console.log('[GuidedGenerations] Action button: Corrections function executed successfully');
-            } catch (error) {
-                console.error('[GuidedGenerations] Action button: Failed to import or execute corrections:', error);
-                console.error('[GuidedGenerations] Action button: Error details:', {
-                    message: error.message,
-                    stack: error.stack,
-                    name: error.name,
-                    cause: error.cause
-                });
-            }
-        });
-        regularButtons.push(correctionsButton);
-    }
-    
-    // Spellchecker button
-    if (settings.showSpellcheckerButton) {
-        const spellcheckerButton = createActionButton('gg_spellchecker_button', 'Spellchecker', 'fa-solid fa-spell-check', async () => {
-            console.log('[GuidedGenerations] Spellchecker action button clicked, starting import...');
-            try {
-                console.log('[GuidedGenerations] Action button: About to import from central hub:', './scripts/persistentGuides/guideExports.js');
-                const { spellchecker } = await import('./scripts/persistentGuides/guideExports.js');
-                console.log('[GuidedGenerations] Action button: Successfully imported spellchecker function:', spellchecker);
-                await spellchecker();
-                console.log('[GuidedGenerations] Action button: Spellchecker function executed successfully');
-            } catch (error) {
-                console.error('[GuidedGenerations] Action button: Failed to import or execute spellchecker:', error);
-                console.error('[GuidedGenerations] Action button: Error details:', {
-                    message: error.message,
-                    stack: error.stack,
-                    name: error.name,
-                    cause: error.cause
-                });
-            }
-        });
-        regularButtons.push(spellcheckerButton);
-    }
-    
-    // Clear Input button
-    if (settings.showClearInputButton) {
-        const clearInputButton = createActionButton('gg_clear_input_button', 'Clear Input', 'fa-solid fa-trash', async () => {
-            const clearInput = await import('./scripts/tools/clearInput.js');
-            await clearInput.default();
-        });
-        regularButtons.push(clearInputButton);
-    }
-    
-    // Add standard buttons after tool buttons (right side)
     
     // Add impersonate buttons
     if (settings.showImpersonate1stPerson) {
@@ -1287,25 +848,12 @@ function updateExtensionButtons() {
         regularButtons.push(guidedContinueButton);
     }
     
-    // Add Undo Last Addition button
-    if (settings.showUndoButton) {
-        const undoButton = createActionButton('gg_undo_button', 'Undo Last Addition', 'fa-solid fa-rotate-left', undoLastGuidedAddition);
-        regularButtons.push(undoButton);
-    }
-    
-    // Add Revert to Original button
-    if (settings.showRevertButton) {
-        const revertButton = createActionButton('gg_revert_button', 'Revert to Original', 'fa-solid fa-history', revertToOriginalGuidedContinue);
-        regularButtons.push(revertButton);
-    }
-    
     // Append all buttons to the container in the correct order
     regularButtons.forEach(button => {
         actionButtonsContainer.appendChild(button);
     });
 
     integrateQRBar(); // Ensure QR bar is correctly placed after UI update
-    updatePersistentGuideCounter(); // Update counter after buttons are set up
 }
 
 // Function to integrate QR Bar from other extensions into our container
@@ -1559,10 +1107,6 @@ async function installPreset() {
     }
 }
 
-// Debounced version of the counter update function
-let updatePersistentGuideCounterDebounced;
-
-
 // Run setup after page load
 $(document).ready(async function () {
     const context = getContext(); // Get the context here
@@ -1572,70 +1116,19 @@ $(document).ready(async function () {
 
     setup(); // Initial setup of settings, UI elements etc.
 
-    // Delayed initial counter update to allow metadata to populate
-    setTimeout(() => {
-        console.log(`${extensionName}: Performing DELAYED initial update of persistent guide counter.`);
-        updatePersistentGuideCounter();
-    }, 5000); // Delay by 5 seconds
-
-    // Initialize the debounced function for counter updates from ST events
-    if (SillyTavern && SillyTavern.libs && SillyTavern.libs.lodash && SillyTavern.libs.lodash.debounce) {
-        updatePersistentGuideCounterDebounced = SillyTavern.libs.lodash.debounce(() => {
-            console.log(`${extensionName}: Debounced updatePersistentGuideCounter executing due to ST event.`);
-            updatePersistentGuideCounter();
-        }, 300); // 300ms debounce interval
-        console.log(`${extensionName}: Initialized debounced version of updatePersistentGuideCounter for ST events.`);
-    } else {
-        console.warn(`${extensionName}: Lodash debounce not found. Counter updates from ST events will not be debounced.`);
-        updatePersistentGuideCounterDebounced = () => { // Fallback to immediate call
-            console.log(`${extensionName}: updatePersistentGuideCounter (non-debounced fallback) executing due to ST event.`);
-            updatePersistentGuideCounter();
-        };
-    }
-
-    // Add SillyTavern event listeners for counter updates
-    const eventsToUpdateCounter = [
-        context.eventTypes.APP_READY,
-        context.eventTypes.CHAT_CREATED,
-        context.eventTypes.CHAT_CHANGED,
-        context.eventTypes.CHARACTER_MESSAGE_RENDERED,
-        context.eventTypes.USER_MESSAGE_RENDERED,
-        context.eventTypes.WORLD_INFO_ACTIVATED,
-        context.eventTypes.GENERATION_STARTED,
-        context.eventTypes.GENERATION_ENDED,
-        context.eventTypes.GENERATION_STOPPED,
-        context.eventTypes.GENERATION_AFTER_COMMANDS,
-        context.eventTypes.CONNECTION_PROFILE_LOADED,
-        context.eventTypes.PRESET_CHANGED,
-    ];
-
-    console.log(`${extensionName}: Registering SillyTavern event listeners for persistent guide counter updates.`);
-    for (const eventName of eventsToUpdateCounter) {
-        if (eventName && typeof eventName === 'string') { // Ensure eventName is a valid string
-            context.eventSource.makeLast(eventName, (...args) => {
-                console.log(`${extensionName}: SillyTavern Event '${eventName}' received. Queuing debounced update for persistent guide counter.`);
-                if (updatePersistentGuideCounterDebounced) {
-                    updatePersistentGuideCounterDebounced();
-                }
-                
-                // Handle profile and preset changes for the switching system
-                if (eventName === context.eventTypes.CONNECTION_PROFILE_LOADED) {
-                    const profileName = args[0];
-                    console.log(`${extensionName}: Profile change detected: "${profileName}"`);
-                    // Emit a custom event that presetUtils can listen for
-                    window.dispatchEvent(new CustomEvent('gg-profile-changed', { detail: { profileName } }));
-                } else if (eventName === context.eventTypes.PRESET_CHANGED) {
-                    const presetInfo = args[0];
-                    console.log(`${extensionName}: Preset change detected:`, presetInfo);
-                    // Emit a custom event that presetUtils can listen for
-                    window.dispatchEvent(new CustomEvent('gg-preset-changed', { detail: { presetInfo } }));
-                }
-            });
-        } else {
-            console.warn(`${extensionName}: An event type in eventsToUpdateCounter was undefined or not a string. Skipping listener registration for it. Event: `, eventName);
-        }
-    }
-    console.log(`${extensionName}: Finished registering SillyTavern event listeners for counter.`);
+    // Register listeners for profile/preset change events (needed by presetUtils.js's
+    // switching system for Impersonate profile/preset detection).
+    console.log(`${extensionName}: Registering profile/preset change event listeners.`);
+    context.eventSource.makeLast(context.eventTypes.CONNECTION_PROFILE_LOADED, (...args) => {
+        const profileName = args[0];
+        console.log(`${extensionName}: Profile change detected: "${profileName}"`);
+        window.dispatchEvent(new CustomEvent('gg-profile-changed', { detail: { profileName } }));
+    });
+    context.eventSource.makeLast(context.eventTypes.PRESET_CHANGED, (...args) => {
+        const presetInfo = args[0];
+        console.log(`${extensionName}: Preset change detected:`, presetInfo);
+        window.dispatchEvent(new CustomEvent('gg-preset-changed', { detail: { presetInfo } }));
+    });
 
     // Settings Panel Setup (runs with delay to allow main UI to render)
     setTimeout(() => {
@@ -1681,150 +1174,6 @@ $(document).ready(async function () {
         }
     }, 2000);
 
-    // ENHANCED DEBUGGING: Track event listener registration
-    console.log(`[AUTOTRIGGER-DEBUG] Registering GENERATION_AFTER_COMMANDS event listener at:`, {
-        timestamp: new Date().toISOString(),
-        stackTrace: new Error().stack,
-        eventSource: eventSource,
-        eventSourceType: typeof eventSource
-    });
-
-    // ENHANCED DEBUGGING: Check if event listener already exists
-    if (eventSource && typeof eventSource.listenerCount === 'function') {
-        try {
-            const currentListeners = eventSource.listenerCount('GENERATION_AFTER_COMMANDS');
-            console.log(`[AUTOTRIGGER-DEBUG] Current GENERATION_AFTER_COMMANDS listeners before registration: ${currentListeners}`);
-        } catch (error) {
-            console.log(`[AUTOTRIGGER-DEBUG] Could not check listener count:`, error);
-        }
-    }
-
-    // Listen for the GENERATION_AFTER_COMMANDS event
-    eventSource.on('GENERATION_AFTER_COMMANDS', async (type, generateArgsObject, dryRun) => {
-        
-        // ENHANCED DEBUGGING: Log every event received
-        console.log(`[AUTOTRIGGER-DEBUG] GENERATION_AFTER_COMMANDS event received:`, {
-            type: type,
-            typeType: typeof type,
-            dryRun: dryRun,
-            generateArgsObject: generateArgsObject,
-            timestamp: new Date().toISOString(),
-            stackTrace: new Error().stack
-        });
-
-        // Condition for auto-triggering guides
-        if ((type === 'normal' || typeof type === 'undefined') && !dryRun && !generateArgsObject?.signal) {
-            const settings = extension_settings[extensionName];
-            
-            // Check if any of the 4 auto-guides are active
-            const hasActiveAutoGuides = settings && (
-                settings.autoTriggerThinking ||
-                settings.autoTriggerState ||
-                settings.autoTriggerClothes ||
-                settings.enableAutoCustomAutoGuide
-            );
-
-            // Check if tracker is active (tracker is chat-specific, not global)
-            const context = getContext();
-            const hasActiveTracker = context?.chatMetadata?.[`${extensionName}_trackers`]?.enabled;
-
-            // Only proceed if at least one auto-guide OR tracker is active
-            if (!hasActiveAutoGuides && !hasActiveTracker) {
-                return;
-            }
-
-            // ENHANCED DEBUGGING: Log detailed execution info
-            console.log(`[AUTOTRIGGER-DEBUG] Autotrigger execution starting:`, {
-                hasActiveAutoGuides: hasActiveAutoGuides,
-                hasActiveTracker: hasActiveTracker,
-                autoTriggerThinking: settings?.autoTriggerThinking,
-                autoTriggerState: settings?.autoTriggerState,
-                autoTriggerClothes: settings?.autoTriggerClothes,
-                enableAutoCustomAutoGuide: settings?.enableAutoCustomAutoGuide,
-                timestamp: new Date().toISOString(),
-                executionId: Math.random().toString(36).substr(2, 9)
-            });
-
-            // Log what's triggering the auto-execution
-            if (hasActiveTracker && !hasActiveAutoGuides) {
-                debugLog('Proceeding with auto-execution due to active tracker');
-            } else if (hasActiveAutoGuides) {
-                debugLog('Proceeding with auto-execution due to active auto-guides');
-            }
-
-            const textarea = document.getElementById('send_textarea');
-            if (textarea && textarea.value.trim() !== '') {
-                await simpleSend();
-            }
-
-            let savedInstructInjection = null;
-
-            // Check for and save the ephemeral 'instruct' injection before auto-guides run
-            if (context?.chatMetadata?.script_injects?.instruct) {
-                // Create a deep copy to avoid issues with the object being mutated elsewhere
-                savedInstructInjection = JSON.parse(JSON.stringify(context.chatMetadata.script_injects.instruct));
-                await context.executeSlashCommandsWithOptions("/flushinject instruct", { displayCommand: false, showOutput: false });
-            }
-
-            // Compatibility check for 'send_if_empty'
-            if (context.chatCompletionSettings.send_if_empty) {
-                const disableAll = confirm('Incompatible Setting Detected: Guided Generations\n\nYour "Replace empty message" utility prompt is active. This will cause its content to be sent as a second message after every generation.\n\nWould you like to disable all auto-guides to fix this? (Click OK to disable all auto-guides, Cancel to keep them enabled)');
-                if (disableAll) {
-                    // Disable all auto-guides
-                    if (settings) {
-                        settings.autoTriggerThinking = false;
-                        settings.autoTriggerState = false;
-                        settings.autoTriggerClothes = false;
-                        settings.enableAutoCustomAutoGuide = false;
-                        // Save the settings
-                        saveSettingsDebounced();
-                    }
-                }
-                return; // Stop before triggering guides
-            }
-
-            if (settings) {
-                if (settings.autoTriggerThinking) {
-                    console.log(`[AUTOTRIGGER-DEBUG] Executing thinkingGuide with executionId: ${Math.random().toString(36).substr(2, 9)}`);
-                    await thinkingGuide(true); // Pass isAuto=true
-                }
-                if (settings.autoTriggerState) {
-                    console.log(`[AUTOTRIGGER-DEBUG] Executing stateGuide with executionId: ${Math.random().toString(36).substr(2, 9)}`);
-                    await stateGuide(true); // Pass isAuto=true
-                }
-                if (settings.autoTriggerClothes) {
-                    console.log(`[AUTOTRIGGER-DEBUG] Executing clothesGuide with executionId: ${Math.random().toString(36).substr(2, 9)}`);
-                    await clothesGuide(true); // Pass isAuto=true
-                }
-                if (settings.enableAutoCustomAutoGuide) {
-                    console.log(`[AUTOTRIGGER-DEBUG] Executing customAutoGuide with executionId: ${Math.random().toString(36).substr(2, 9)}`);
-                    await customAutoGuide(true); // Pass isAuto=true
-                }
-            } else {
-                console.warn('GuidedGenerations-Extension: Extension settings not found, cannot auto-trigger guides.');
-            }
-
-            // Execute tracker if enabled (tracker is always chat-specific, no global setting needed)
-            await checkAndExecuteTracker();
-
-            console.log(`[AUTOTRIGGER-DEBUG] Autotrigger execution completed successfully at: ${new Date().toISOString()}`);
-
-            // Re-insert the 'instruct' injection if it was saved
-            // Re-insert the 'instruct' injection if it was saved
-            if (savedInstructInjection && typeof SillyTavern !== 'undefined' && typeof SillyTavern.getContext === 'function') {
-                try {
-                    const { value, depth, scan } = savedInstructInjection;
-                    // Get role from settings for consistency, and hardcode position to 'chat' as it's where 'instruct' belongs.
-                    const injectionRole = extension_settings[extensionName]?.injectionEndRole ?? 'system';
-                    const re_inject_command = `/inject id=instruct position=chat ephemeral=true scan=${scan} depth=${depth} role=${injectionRole} ${value}`;
-                    await context.executeSlashCommandsWithOptions(re_inject_command, { displayCommand: false, showOutput: false });
-                } catch (error) {
-                    console.error('[GuidedGenerations] Failed to restore ephemeral "instruct" injection:', error);
-                }
-            }
-        }
-    });
-
     // Check extension version and notify if updated
     checkVersionAndNotify();
 }); // END OF $(document).ready()
@@ -1859,54 +1208,12 @@ async function checkVersionAndNotify() {
 
 // Expose functions to the global scope for buttons or STScripts
 window.GuidedGenerations = {
-    simpleSend,
     guidedSwipe,
     guidedContinue,
     undoLastGuidedAddition, // Expose new function
     revertToOriginalGuidedContinue, // Expose new function
     guidedResponse,
-    updatePersistentGuideCounter, // Expose counter update function
 };
-
-/**
- * Counts the number of active persistent guides.
- * @param {object} context The SillyTavern context object.
- * @returns {number} The number of active persistent guides.
- */
-function countActiveGuides(context) {
-    if (context && context.chatMetadata && context.chatMetadata.script_injects) {
-        return Object.keys(context.chatMetadata.script_injects).length;
-    }
-    return 0;
-}
-
-/**
- * Updates the display of the persistent guide counter on the pg_menu_button.
- */
-function updatePersistentGuideCounter() {
-    const context = getContext(); 
-    if (!context) {
-        console.warn(`${extensionName}: Context not available, cannot update persistent guide counter.`);
-        return;
-    }
-
-    const count = countActiveGuides(context);
-    const pgMenuButton = document.getElementById('pg_menu_button');
-
-    if (pgMenuButton) {
-        let counterSpan = pgMenuButton.querySelector('#pg_guide_counter_span');
-        if (!counterSpan) {
-            counterSpan = document.createElement('span');
-            counterSpan.id = 'pg_guide_counter_span';
-            counterSpan.className = 'pg-guide-counter'; // For styling
-            pgMenuButton.appendChild(counterSpan);
-        }
-        counterSpan.textContent = ` ${count}`; // Display count without parentheses, e.g., " 0"
-        pgMenuButton.title = `Persistent Guides: ${count} Injections active.`; // Update the title attribute (mouseover text)
-    } else {
-        console.warn(`${extensionName}: pg_menu_button NOT found. Counter cannot be displayed.`);
-    } 
-}
 
 /**
  * Debug function for the profile system
