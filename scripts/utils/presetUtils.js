@@ -1,5 +1,8 @@
 import { debugLog, debugWarn, extension_settings, extensionName } from '../persistentGuides/guideExports.js'; // Import from central hub
 
+// ST core World Info settings API (same depth as extensions.js import in guideExports.js: public/scripts/world-info.js)
+import { getWorldInfoSettings, updateWorldInfoSettings } from '../../../../../world-info.js';
+
 // Event listener management for profile and preset switching
 let eventListenersInitialized = false;
 let profileChangePromise = null;
@@ -1150,5 +1153,78 @@ export async function handleSwitching(profileValue = null, presetValue = null, o
         originalPreset: presetToRestore
     };
 }
+
+/**
+ * Captures the current global World Info activation settings (Context %, budget cap, etc.)
+ * so they can be restored later. Use alongside applyImpersonateWorldInfoBudget/restoreWorldInfoBudget.
+ * @returns {object} Snapshot of the current World Info settings.
+ */
+export function captureWorldInfoBudget() {
+    try {
+        const snapshot = getWorldInfoSettings();
+        debugLog(`[${extensionName}] Captured World Info budget snapshot: world_info_budget=${snapshot?.world_info_budget}`);
+        return snapshot;
+    } catch (error) {
+        debugWarn(`[${extensionName}] Error capturing World Info budget snapshot:`, error);
+        return null;
+    }
+}
+
+/**
+ * Temporarily overrides the global World Info "Context %" budget.
+ * Only touches world_info_budget - all other World Info settings (depth, recursion, etc.) are left untouched.
+ * @param {number} budgetPercent The percentage (0-100) to apply.
+ */
+/**
+ * Syncs ST's own World Info "Context %" slider and its number readout to reflect the current
+ * world_info_budget value. updateWorldInfoSettings() only updates the underlying JS variable and
+ * persists it - it does NOT redraw the slider widget (that only happens at page-load time via ST's
+ * separate setWorldInfoSettings() function). This replicates that same DOM sync manually so the
+ * slider visually confirms the swap in real time.
+ * @param {number} value The percentage value to display.
+ */
+function syncWorldInfoBudgetSliderUI(value) {
+    try {
+        const slider = document.getElementById('world_info_budget');
+        if (slider) slider.value = value;
+        const counter = document.getElementById('world_info_budget_counter');
+        if (counter) counter.value = value;
+    } catch (error) {
+        debugWarn(`[${extensionName}] Error syncing World Info budget slider UI:`, error);
+    }
+}
+
+export function applyImpersonateWorldInfoBudget(budgetPercent) {
+    try {
+        const value = Number(budgetPercent);
+        if (!Number.isFinite(value) || value <= 0) {
+            debugLog(`[${extensionName}] Skipping World Info budget override (value: ${budgetPercent})`);
+            return;
+        }
+        debugLog(`[${extensionName}] Applying Impersonate-specific World Info budget: ${value}%`);
+        updateWorldInfoSettings({ world_info_budget: value });
+        syncWorldInfoBudgetSliderUI(value);
+    } catch (error) {
+        debugWarn(`[${extensionName}] Error applying World Info budget override:`, error);
+    }
+}
+
+/**
+ * Restores World Info settings from a snapshot captured by captureWorldInfoBudget().
+ * @param {object} snapshot Snapshot previously returned by captureWorldInfoBudget().
+ */
+export function restoreWorldInfoBudget(snapshot) {
+    if (!snapshot) {
+        return;
+    }
+    try {
+        debugLog(`[${extensionName}] Restoring World Info budget to: ${snapshot.world_info_budget}%`);
+        updateWorldInfoSettings({ world_info_budget: snapshot.world_info_budget });
+        syncWorldInfoBudgetSliderUI(snapshot.world_info_budget);
+    } catch (error) {
+        debugWarn(`[${extensionName}] Error restoring World Info budget:`, error);
+    }
+}
+
 
 

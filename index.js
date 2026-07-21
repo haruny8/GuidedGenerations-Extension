@@ -196,6 +196,7 @@ export const defaultSettings = {
     depthPromptGuidedSwipe: 0,
     profileSwitchTimeout: 500, // Default safety delay after profile switch (ms)
     presetSwitchTimeout: 200, // Default safety delay after preset switch (ms)
+    impersonateWorldInfoBudget: 0, // World Info Context % override for Impersonate calls (0 = disabled, use global setting)
     LastPatchNoteVersion: '1.4.3' // Default extension version for patch notes
 };
 
@@ -374,6 +375,15 @@ async function updateSettingsUI() {
             }
         });
 
+        // Populate Impersonate World Info budget slider + its live number readout
+        {
+            const wiBudgetValue = extension_settings[extensionName]['impersonateWorldInfoBudget'] ?? defaultSettings['impersonateWorldInfoBudget'] ?? 0;
+            const wiBudgetSlider = document.getElementById('gg_impersonateWorldInfoBudget');
+            const wiBudgetDisplay = document.getElementById('gg_impersonateWorldInfoBudget_display');
+            if (wiBudgetSlider) wiBudgetSlider.value = wiBudgetValue;
+            if (wiBudgetDisplay) wiBudgetDisplay.textContent = wiBudgetValue == 0 ? 'Off' : `${wiBudgetValue}%`;
+        }
+
         debugLog(`${extensionName}: Settings UI updated.`);
     } else {
         debugWarn(`${extensionName}: Settings container #${settingsPanelId} not found during updateSettingsUI.`);
@@ -395,8 +405,24 @@ const addSettingsEventListeners = () => {
         settingsContainer.removeEventListener('change', handleSettingsChangeDelegated);
         // Add the delegated listener
         settingsContainer.addEventListener('change', handleSettingsChangeDelegated);
+
+        // Live-update the World Info budget slider's number readout while dragging (before 'change' fires on release)
+        settingsContainer.removeEventListener('input', handleSliderLiveDisplay);
+        settingsContainer.addEventListener('input', handleSliderLiveDisplay);
     } else {
         console.error(`[${extensionName}] Could not find settings container #${containerId} to attach listeners.`);
+    }
+};
+
+/**
+ * Live-updates the World Info budget slider's number readout while the user is dragging it,
+ * ahead of the 'change' event (which only fires on release and triggers the actual save).
+ * @param {Event} event The input event object
+ */
+const handleSliderLiveDisplay = (event) => {
+    if (event.target.id === 'gg_impersonateWorldInfoBudget') {
+        const display = document.getElementById('gg_impersonateWorldInfoBudget_display');
+        if (display) display.textContent = event.target.value == 0 ? 'Off' : `${event.target.value}%`;
     }
 };
 
@@ -425,6 +451,10 @@ const handleSettingsChangeDelegated = async (event) => {
         if (event.target.name === 'showGuidedContinue') {
             const button = document.getElementById('gg_continue_button');
             if (button) button.style.display = event.target.checked ? '' : 'none';
+        }
+        if (event.target.name === 'impersonateWorldInfoBudget') {
+            const display = document.getElementById('gg_impersonateWorldInfoBudget_display');
+            if (display) display.textContent = event.target.value == 0 ? 'Off' : `${event.target.value}%`;
         }
         
         // Special handling for profile dropdowns - repopulate preset dropdowns when profile changes
@@ -499,7 +529,7 @@ function handleSettingChange(event) {
                 target.value = settingValue;
             }
         }
-    } else if (target.type === 'number') {
+    } else if (target.type === 'number' || target.type === 'range') {
         const numValue = parseFloat(target.value);
         settingValue = isNaN(numValue) ? 0 : numValue;
     } else {
