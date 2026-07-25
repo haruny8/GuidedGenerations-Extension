@@ -79,6 +79,7 @@ import { guidedResponse } from '../guidedResponse.js';
 import { guidedImpersonate } from '../guidedImpersonate.js';
 import { guidedImpersonate2nd } from '../guidedImpersonate2nd.js';
 import { guidedImpersonate3rd } from '../guidedImpersonate3rd.js';
+import { recoverInput } from '../inputRecovery.js';
 import { loadSettingsPanel } from '../settingsPanel.js';
 
 // Export everything
@@ -126,6 +127,7 @@ export {
     guidedImpersonate,
     guidedImpersonate2nd,
     guidedImpersonate3rd,
+    recoverInput,
     loadSettingsPanel,
 
     // Settings and other

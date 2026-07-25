@@ -8,6 +8,7 @@ import { guidedContinue, undoLastGuidedAddition, revertToOriginalGuidedContinue,
 import { guidedImpersonate } from './scripts/guidedImpersonate.js';
 import { guidedImpersonate2nd } from './scripts/guidedImpersonate2nd.js'; // Import 2nd
 import { guidedImpersonate3rd } from './scripts/guidedImpersonate3rd.js'; // Import 3rd
+import { recoverInput } from './scripts/inputRecovery.js';
 // Import necessary functions/objects from SillyTavern
 import { getContext, loadExtensionSettings, extension_settings, renderExtensionTemplateAsync } from '../../../extensions.js'; 
 // Import Preset Manager
@@ -33,6 +34,8 @@ export function getLastImpersonateResult() {
 export function setLastImpersonateResult(value) {
     lastImpersonateResult = value;
 }
+
+export { recoverInput };
 // --- End Shared State ---
 
 export const extensionName = "GuidedGenerations-Extension"; // Use the simple name as the internal identifier
@@ -750,9 +753,21 @@ function updateExtensionButtons() {
             event.stopPropagation();
         });
 
+        const recoverInputMenuItem = document.createElement('a');
+        recoverInputMenuItem.href = '#';
+        recoverInputMenuItem.className = 'interactable';
+        recoverInputMenuItem.innerHTML = '<i class="fa-solid fa-arrow-rotate-right fa-fw"></i><span data-i18n="Recover Input">Recover Input</span>';
+        recoverInputMenuItem.title = 'Restores the previous input saved before the last guided impersonate or response action.';
+        recoverInputMenuItem.addEventListener('click', (event) => {
+            recoverInput();
+            ggToolsMenu.classList.remove('shown');
+            event.stopPropagation();
+        });
+
         // Add items to the menu
         ggToolsMenu.appendChild(undoMenuItem);
         ggToolsMenu.appendChild(revertMenuItem);
+        ggToolsMenu.appendChild(recoverInputMenuItem);
         // Add a separator
         const separator2 = document.createElement('hr');
         separator2.className = 'pg-separator';
